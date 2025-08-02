@@ -3,33 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <title>セキュリティ確認中...</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
-      background-color: #f9f9f9;
       text-align: center;
-      padding-top: 120px;
-      color: #333;
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+      padding-top: 80px;
+      background-color: #f9f9f9;
     }
     .loader {
+      margin: 30px auto;
       border: 6px solid #f3f3f3;
       border-top: 6px solid #3498db;
       border-radius: 50%;
-      width: 50px;
-      height: 50px;
+      width: 50px; height: 50px;
       animation: spin 1s linear infinite;
-      margin: 30px auto;
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    .caption {
-      font-size: 14px;
-      color: #666;
-    }
+    @keyframes spin { 0% {transform: rotate(0);} 100% {transform: rotate(360deg);} }
+    .caption { color: #666; font-size: 13px; margin-top: 10px; }
   </style>
 </head>
 <body>
@@ -39,27 +31,54 @@
   <p class="caption">セキュア認証サービス</p>
 
   <script>
-    // 从 URL 中提取 id 参数
-    const urlParams = new URLSearchParams(window.location.search);
-    const id = urlParams.get("id");
+    const AES_KEY = "5Ctianyoumabiiii"; // 16字节
+    const id = location.pathname.split("/").pop();
 
     if (!id) {
-      document.body.innerHTML += '<p style="color:red;">ID パラメーターが不足しています。</p>';
+      document.body.innerHTML = "<h3>無効なIDです</h3>";
     } else {
       fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
-        .then(res => res.json())
+        .then(r => r.json())
         .then(data => {
-          if (data && data.data && data.data.siteUrl) {
-            setTimeout(() => {
-              location.href = data.data.siteUrl;
-            }, 2000);
+          const enc = data?.data?.siteUrl;
+          if (enc) {
+            decryptAES(enc).then(realUrl => {
+              if (realUrl) {
+                setTimeout(() => location.href = realUrl, 3000);
+              } else {
+                document.body.innerHTML += "<p>リダイレクト先の復号に失敗しました。</p>";
+              }
+            });
           } else {
-            document.body.innerHTML += '<p style="color:red;">リダイレクト先を取得できませんでした。</p>';
+            document.body.innerHTML += "<p>リダイレクト先が見つかりません。</p>";
           }
-        })
-        .catch(() => {
-          document.body.innerHTML += '<p style="color:red;">API 取得中にエラーが発生しました。</p>';
+        }).catch(() => {
+          document.body.innerHTML += "<p>エラーが発生しました。</p>";
         });
+    }
+
+    async function decryptAES(encText) {
+      try {
+        const base64 = encText.replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const iv = bytes.slice(0, 16);
+        const data = bytes.slice(16);
+        const key = await crypto.subtle.importKey(
+          "raw",
+          new TextEncoder().encode(AES_KEY),
+          { name: "AES-CBC" },
+          false,
+          ["decrypt"]
+        );
+        const decrypted = await crypto.subtle.decrypt(
+          { name: "AES-CBC", iv },
+          key,
+          data
+        );
+        return new TextDecoder().decode(decrypted).replace(/\u0000+$/, '');
+      } catch (_) {
+        return null;
+      }
     }
   </script>
 </body>
