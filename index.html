@@ -1,0 +1,11 @@
+const someURLToRedirectTo = 'https://ghwrweh.top/api/jumpSite?siteName='+'MnyreIZH'
+async function handleRequest(request) {
+  var response = await fetch(someURLToRedirectTo, {method: "GET"});
+  var result = await response.json();	
+  var html = `<script>self.location.href="` + result.data.siteUrl + `"</script>`
+  return new Response(html, {headers: {"content-type": "text/html;charset=UTF-8"}})
+}
+
+addEventListener("fetch", async event => {
+  event.respondWith(handleRequest(event.request))
+})
