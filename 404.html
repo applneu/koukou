@@ -77,7 +77,7 @@
   </style>
 </head>
 <body>
-  <div class="box" id="main-box">
+  <div class="box" id="main-box" style="display: none;">
     <p>あなたが人間であることを知らせてください</p>
     <label><input type="checkbox" id="chk">人間であることを確認します</label>
     <button id="confirmBtn" disabled>確認する</button>
@@ -99,8 +99,20 @@
     const errorBox = document.getElementById("error-box");
     const mainBox = document.getElementById("main-box");
 
+    let decryptedId = null;
+
     const path = location.pathname.split("/").filter(Boolean);
     const encryptedId = path[path.length - 1];
+
+    // 页面加载后立即验证加密 ID
+    (async () => {
+      decryptedId = await decryptAES(encryptedId);
+      if (!decryptedId) {
+        showErrorPage();
+      } else {
+        mainBox.style.display = "block";
+      }
+    })();
 
     checkbox.addEventListener("change", () => {
       button.disabled = !checkbox.checked;
@@ -110,14 +122,8 @@
       button.style.display = "none";
       spinner.style.display = "block";
 
-      const id = await decryptAES(encryptedId);
-      if (!id) {
-        showErrorPage();
-        return;
-      }
-
       try {
-        const res = await fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id));
+        const res = await fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(decryptedId));
         const data = await res.json();
         const url = data?.data?.siteUrl;
         if (!url) throw new Error("No URL");
