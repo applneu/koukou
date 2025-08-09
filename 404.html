@@ -38,46 +38,104 @@
   </div>
 
   <script>
-    /* ========== 多中继配置：可增删，顺序随机 + 记忆上次可用 ========== */
+    /* ========== 多中继配置：顺序随机 + 记忆上次可用 ========== */
     const RELAYS = [
       "https://zhongji-wb3.pages.dev",
       "https://zhongji-wb3.pages.dev",
       "https://zhongji-wb3.pages.dev",
       // "https://relay-x.yourdomain.com",
     ];
-    const ENDPOINT_PATH = "/api/resolve"; // 所有中继统一这个路径
+    const ENDPOINT_PATH = "/api/resolve"; // 中继统一路径
 
-    /* =================== 小工具 =================== */
+    /* ========== 工具 ========== */
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
     function withTimeout(promise, ms=7000){
-      return Promise.race([
-        promise,
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))
-      ]);
+      return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))]);
     }
 
-    /* =================== 主流程 =================== */
+    /* ========== Base58 (用于“混淆路径ID”的封装/还原 enc) ========== */
+    const B58 = (() => {
+      const ALPH = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+      const MAP = Object.fromEntries([...ALPH].map((c,i)=>[c,i]));
+      function encode(binStr){ // 这里直接把 enc 当作 UTF-8 字符串做“迷彩”封装
+        const bytes = new TextEncoder().encode(binStr);
+        let x = BigInt(0);
+        for (const b of bytes) x = (x<<8n) + BigInt(b);
+        if (x === 0n) return "1";
+        let out = "";
+        while (x > 0n){ const r = Number(x % 58n); out = ALPH[r] + out; x = x / 58n; }
+        return out;
+      }
+      function decode(b58){
+        let x = 0n;
+        for (const ch of b58){ const v = MAP[ch]; if (v==null) throw new Error("bad b58"); x = x*58n + BigInt(v); }
+        // 恢复为 UTF-8 字符串
+        const bytes = [];
+        while (x > 0n){ bytes.unshift(Number(x & 255n)); x >>= 8n; }
+        return new TextDecoder().decode(new Uint8Array(bytes));
+      }
+      return { encode, decode };
+    })();
+
+    /* ========== 从 URL 获取 enc（优先 fragment，其次路径混淆，最后 query?k） ========== */
+    function getEncFromUrl() {
+      const u = new URL(location.href);
+
+      // 1) fragment（防红主力） —— 成功则不看其他模式
+      if (u.hash && u.hash.length > 1) {
+        const enc = u.hash.substring(1).trim();
+        if (enc) return { enc, mode: "fragment" };
+      }
+
+      // 2) 路径混淆： .../<mix>/verify.html
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (parts.length >= 2 && parts.at(-1) === "verify.html") {
+        const mix = parts.at(-2);
+        if (mix) {
+          try {
+            const enc = B58.decode(mix); // 还原 enc
+            if (enc) return { enc, mode: "path-mix" };
+          } catch {}
+        }
+      }
+
+      // 3) 兜底 query： .../verify.html?k=<mix>
+      const mixParam = u.searchParams.get("k");
+      if (mixParam) {
+        try {
+          const enc = B58.decode(mixParam);
+          if (enc) return { enc, mode: "query-mix" };
+        } catch {}
+      }
+
+      return { enc: null, mode: null };
+    }
+
+    /* ========== 主流程 ========== */
     (async () => {
       const step = document.getElementById('step');
       const loader = document.getElementById('loader');
       const verifyBox = document.getElementById('verify');
       const chk = document.getElementById('chk');
       const goBtn = document.getElementById('goBtn');
-      const ok = document.getElementById('ok');
+      const okMsg = document.getElementById('ok');
       const err = document.getElementById('err');
 
       loader.style.display = 'block';
 
-      // 取 fragment：这是“加密ID”
-      const encId = (location.hash || '').replace(/^#/, '').trim();
+      const { enc: encId, mode } = getEncFromUrl();
+
       if (!encId) {
         loader.style.display = 'none';
         step.innerText = '無効なリンクです。';
         return;
       }
 
-      // 先用上次成功的中继，其次随机
+      // fragment 成功 → 严格禁止再尝试其他模式（防止互相干扰/破坏防红）
+      // path/query 混淆模式仅在 fragment 缺失时才会触发
+
+      // 中继优先级：上次成功 → 随机
       const lastGood = localStorage.getItem("relay:last_good");
       const relays = RELAYS.slice();
       if (lastGood && relays.includes(lastGood)) {
@@ -87,7 +145,6 @@
         shuffle(relays);
       }
 
-      // 逐个尝试中继
       let target = null, lastError = null;
       for (const relay of relays) {
         try {
@@ -104,7 +161,7 @@
           }
         } catch (e) {
           lastError = e.message || String(e);
-          await sleep(150 + Math.random()*250);
+          await sleep(120 + Math.random()*250);
           continue;
         }
       }
@@ -130,7 +187,7 @@
 
       goBtn.addEventListener('click', () => {
         goBtn.disabled = true;
-        ok && (ok.style.display = 'block');
+        okMsg && (okMsg.style.display = 'block');
         const a = document.createElement('a');
         a.href = target;
         a.rel = 'noreferrer noopener';
