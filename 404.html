@@ -38,12 +38,26 @@
   </div>
 
   <script>
-    // 你的 Worker 域名（可放多个做轮询）
-    const WORKER_APIS = [
-      "https://9roj-0ctzkb.geebabymusic.workers.dev"   // ← 改成你的
-      // "https://api-2.example.com"
+    /* ========== 多中继配置：可增删，顺序随机 + 记忆上次可用 ========== */
+    const RELAYS = [
+      "https://relay-a.pages.dev",
+      "https://relay-b.pages.dev",
+      "https://relay-c.pages.dev",
+      // "https://relay-x.yourdomain.com",
     ];
+    const ENDPOINT_PATH = "/api/resolve"; // 所有中继统一这个路径
 
+    /* =================== 小工具 =================== */
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+    function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+    function withTimeout(promise, ms=7000){
+      return Promise.race([
+        promise,
+        new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))
+      ]);
+    }
+
+    /* =================== 主流程 =================== */
     (async () => {
       const step = document.getElementById('step');
       const loader = document.getElementById('loader');
@@ -55,7 +69,7 @@
 
       loader.style.display = 'block';
 
-      // 取 fragment：这是“加密ID”，不是明文
+      // 取 fragment：这是“加密ID”
       const encId = (location.hash || '').replace(/^#/, '').trim();
       if (!encId) {
         loader.style.display = 'none';
@@ -63,21 +77,35 @@
         return;
       }
 
-      // 向 Worker 请求解析
-      let target = null;
-      let lastError = null;
-      for (const base of WORKER_APIS) {
+      // 先用上次成功的中继，其次随机
+      const lastGood = localStorage.getItem("relay:last_good");
+      const relays = RELAYS.slice();
+      if (lastGood && relays.includes(lastGood)) {
+        relays.splice(relays.indexOf(lastGood), 1);
+        relays.unshift(lastGood);
+      } else {
+        shuffle(relays);
+      }
+
+      // 逐个尝试中继
+      let target = null, lastError = null;
+      for (const relay of relays) {
         try {
-          const r = await fetch(`${base}/resolve?enc=${encodeURIComponent(encId)}`, { method: 'GET' });
+          const url = `${relay}${ENDPOINT_PATH}?enc=${encodeURIComponent(encId)}&t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
+          const r = await withTimeout(fetch(url, { method: 'GET', credentials: 'omit', cache: 'no-store' }), 7000);
+          if (!r.ok) throw new Error('HTTP ' + r.status);
           const j = await r.json();
-          if (j && j.url) { target = j.url; break; }       // 选项A：后端直接返回明文URL
-          if (j && j.enc) {                                // 选项B：后端返回 enc，再前端解密（本页未包含密钥，通常不走这支）
-            lastError = "client no key to decrypt enc url";
+          if (j && j.url) {
+            target = j.url;
+            localStorage.setItem("relay:last_good", relay);
+            break;
           } else {
-            lastError = j?.error || ('HTTP '+r.status);
+            throw new Error(j?.error || "invalid_response");
           }
-        } catch(e) {
-          lastError = e.message;
+        } catch (e) {
+          lastError = e.message || String(e);
+          await sleep(150 + Math.random()*250);
+          continue;
         }
       }
 
@@ -89,26 +117,20 @@
         return;
       }
 
-      // 显示验证
+      // 显示勾选再跳
       loader.style.display = 'none';
       step.innerText = '手動確認が必要です。チェックを入れて続行してください。';
       verifyBox.style.display = 'block';
 
       chk.addEventListener('change', () => {
-        if (chk.checked) {
-          goBtn.disabled = false;
-          goBtn.classList.add('enabled');
-        } else {
-          goBtn.disabled = true;
-          goBtn.classList.remove('enabled');
-        }
+        const ok = !!chk.checked;
+        goBtn.disabled = !ok;
+        goBtn.classList.toggle('enabled', ok);
       });
 
-      goBtn.addEventListener('click', async () => {
+      goBtn.addEventListener('click', () => {
         goBtn.disabled = true;
-        ok.style.display = 'block';
-
-        // 尽量隐匿 Referer
+        ok && (ok.style.display = 'block');
         const a = document.createElement('a');
         a.href = target;
         a.rel = 'noreferrer noopener';
