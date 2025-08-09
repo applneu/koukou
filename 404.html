@@ -28,7 +28,7 @@
     <div class="loader" id="loader"></div>
 
     <div id="verify" style="display:none;">
-      <label><input type="checkbox" id="chk" />人間であることを確認します</label>
+      <label><input type="checkbox" id="chk" />私はロボットではありません</label>
       <button id="goBtn" disabled>続行</button>
       <div class="msg" id="ok">✅ 検証に成功しました。リダイレクト中...</div>
       <p class="err" id="err" style="display:none;"></p>
@@ -110,7 +110,7 @@
       }
 
       loader.style.display = 'none';
-      step.innerText = 'あなたが人間であることを知らせてください';
+      step.innerText = '手動確認が必要です。チェックを入れて続行してください。';
       verifyBox.style.display = 'block';
 
       chk.addEventListener('change', () => {
