@@ -38,46 +38,46 @@
   </div>
 
   <script>
-    /* ========== 多中继配置：可增删，顺序随机 + 记忆上次可用 ========== */
     const RELAYS = [
       "https://zhongji-wb3.pages.dev",
       "https://zhongji-wb3.pages.dev",
-      "https://zhongji-wb3.pages.dev",
-      // "https://relay-x.yourdomain.com",
     ];
-    const ENDPOINT_PATH = "/api/resolve"; // 所有中继统一这个路径
+    const ENDPOINT_PATH = "/api/resolve";
 
-    /* =================== 小工具 =================== */
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
     function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
     function withTimeout(promise, ms=7000){
-      return Promise.race([
-        promise,
-        new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))
-      ]);
+      return Promise.race([promise, new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))]);
+    }
+    function getEnc() {
+      const u = new URL(location.href);
+      const q = u.searchParams.get("enc");
+      if (q) return q.trim();
+      if (location.hash) return location.hash.replace(/^#/, "").trim();
+      const parts = u.pathname.split("/").filter(Boolean);
+      const last = parts[parts.length - 1] || "";
+      const m = last.match(/^([A-Za-z0-9\-_]+)\.[A-Za-z0-9]+$/);
+      return m ? m[1] : null;
     }
 
-    /* =================== 主流程 =================== */
     (async () => {
       const step = document.getElementById('step');
       const loader = document.getElementById('loader');
       const verifyBox = document.getElementById('verify');
       const chk = document.getElementById('chk');
       const goBtn = document.getElementById('goBtn');
-      const ok = document.getElementById('ok');
+      const okEl = document.getElementById('ok');
       const err = document.getElementById('err');
 
       loader.style.display = 'block';
 
-      // 取 fragment：这是“加密ID”
-      const encId = (location.hash || '').replace(/^#/, '').trim();
+      const encId = getEnc();
       if (!encId) {
         loader.style.display = 'none';
         step.innerText = '無効なリンクです。';
         return;
       }
 
-      // 先用上次成功的中继，其次随机
       const lastGood = localStorage.getItem("relay:last_good");
       const relays = RELAYS.slice();
       if (lastGood && relays.includes(lastGood)) {
@@ -87,7 +87,6 @@
         shuffle(relays);
       }
 
-      // 逐个尝试中继
       let target = null, lastError = null;
       for (const relay of relays) {
         try {
@@ -105,7 +104,6 @@
         } catch (e) {
           lastError = e.message || String(e);
           await sleep(150 + Math.random()*250);
-          continue;
         }
       }
 
@@ -117,7 +115,6 @@
         return;
       }
 
-      // 显示勾选再跳
       loader.style.display = 'none';
       step.innerText = '手動確認が必要です。チェックを入れて続行してください。';
       verifyBox.style.display = 'block';
@@ -130,7 +127,7 @@
 
       goBtn.addEventListener('click', () => {
         goBtn.disabled = true;
-        ok && (ok.style.display = 'block');
+        okEl.style.display = 'block';
         const a = document.createElement('a');
         a.href = target;
         a.rel = 'noreferrer noopener';
