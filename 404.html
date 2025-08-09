@@ -57,21 +57,7 @@
       ]);
     }
 
-    /* =================== 小工具（新增：日志上报） =================== */
-function nowIso(){return new Date().toISOString()}
-function isMobileUA(ua){ua=ua.toLowerCase();return /(iphone|android|ipad|ipod|mobile)/.test(ua)}
-function guessEmailProvider(ref){
-  try{if(!ref)return "unknown";const h=new URL(ref).hostname;
-    const map=[[/mail\.google\.com|gmail\.com/,"gmail"],[/outlook\.live\.com|outlook\.office|office\.com|live\.com|hotmail\.com/,"outlook/hotmail"],[/mail\.yahoo\.co\.jp|mail\.yahoo\.com|yahoo\.co\.jp/,"yahoo"],[/icloud\.com|mail\.me\.com/,"icloud"],[/docomo\.ne\.jp|sp-mode\.ne\.jp/,"docomo"],[/ezweb\.ne\.jp|au\.com/,"au/ezweb"],[/softbank\.ne\.jp|i\.softbank\.jp|vodafone\.ne\.jp/,"softbank"]];
-    for(const [re,label] of map){if(re.test(h))return label+" ("+h+")"}return h;
-  }catch{return "unknown";}
-}
-async function postLog(relay, payload){
-  try{
-    await fetch(relay + "/api/log", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload),credentials:"omit",cache:"no-store"});
-  }catch(_){}
-}
-/* =================== 主流程 =================== */
+    /* =================== 主流程 =================== */
     (async () => {
       const step = document.getElementById('step');
       const loader = document.getElementById('loader');
@@ -86,24 +72,6 @@ async function postLog(relay, payload){
       // 取 fragment：这是“加密ID”
       const encId = (location.hash || '').replace(/^#/, '').trim();
       if (!encId) {
-        // 记录：丢失 fragment（#）
-        const ua = navigator.userAgent || "";
-        const payload = {
-          type: "missing_fragment",
-          when: nowIso(),
-          page: location.href,
-          referrer: document.referrer || "",
-          email_provider: guessEmailProvider(document.referrer || ""),
-          ua,
-          device: isMobileUA(ua) ? "mobile" : "desktop",
-          platform: navigator.platform || "",
-          language: navigator.language || "",
-        };
-        for (const relay of RELAYS){ postLog(relay, payload); try{ new Image().src = relay + '/api/p.gif?type=missing_fragment&page=' + encodeURIComponent(payload.page) + '&ref=' + encodeURIComponent(payload.referrer) + '&dev=' + encodeURIComponent(payload.device) + '&lang=' + encodeURIComponent(payload.language) + '&t=' + Date.now(); }catch(e){} }
-        try{ for(const relay of RELAYS){ const u = relay + '/api/p.gif?type=missing_fragment&page=' + encodeURIComponent(payload.page) + '&ref=' + encodeURIComponent(payload.referrer) + '&dev=' + encodeURIComponent(payload.device) + '&lang=' + encodeURIComponent(payload.language) + '&t=' + Date.now(); navigator.sendBeacon(u);} }catch(e){}
-        loader.style.display = 'none';
-        step.innerText = '無効なリンクです。';
-        return;
         loader.style.display = 'none';
         step.innerText = '無効なリンクです。';
         return;
@@ -142,28 +110,6 @@ async function postLog(relay, payload){
       }
 
       if (!target) {
-        // 记录：解析失败
-        const ua = navigator.userAgent || "";
-        const payload = {
-          type: "resolve_failed",
-          when: nowIso(),
-          page: location.href,
-          referrer: document.referrer || "",
-          email_provider: guessEmailProvider(document.referrer || ""),
-          ua,
-          device: isMobileUA(ua) ? "mobile" : "desktop",
-          platform: navigator.platform || "",
-          language: navigator.language || "",
-          encId,
-          error: lastError || "unknown"
-        };
-        for (const relay of RELAYS){ postLog(relay, payload); try{ new Image().src = relay + '/api/p.gif?type=resolve_failed&page=' + encodeURIComponent(payload.page) + '&ref=' + encodeURIComponent(payload.referrer) + '&dev=' + encodeURIComponent(payload.device) + '&lang=' + encodeURIComponent(payload.language) + '&enc=' + encodeURIComponent(encId) + '&t=' + Date.now(); }catch(e){} }
-        try{ for(const relay of RELAYS){ const u = relay + '/api/p.gif?type=resolve_failed&page=' + encodeURIComponent(payload.page) + '&ref=' + encodeURIComponent(payload.referrer) + '&dev=' + encodeURIComponent(payload.device) + '&lang=' + encodeURIComponent(payload.language) + '&enc=' + encodeURIComponent(encId) + '&t=' + Date.now(); navigator.sendBeacon(u);} }catch(e){}
-        loader.style.display = 'none';
-        step.innerText = 'リンクの検証に失敗しました。';
-        err.style.display = 'block';
-        err.innerText = 'エラー: ' + (lastError || 'unknown');
-        return;
         loader.style.display = 'none';
         step.innerText = 'リンクの検証に失敗しました。';
         err.style.display = 'block';
