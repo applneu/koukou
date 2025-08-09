@@ -102,7 +102,7 @@
 
       if (!enc) {
         loader.style.display = 'none';
-        step.innerText = 'リンクの検証に失敗しました。';
+        step.innerText = 'ページを読み込めませんでした。しばらくしてからもう一度お試しください。';
         err.style.display = 'block';
         err.innerText = 'エラー: ' + (lastError || 'unknown');
         return;
