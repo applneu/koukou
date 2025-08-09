@@ -23,12 +23,11 @@
 </head>
 <body>
   <div class="card">
-    <h1>セキュリティ確認中...</h1>
-    <p id="step">リンクを検証しています。しばらくお待ちください。</p>
+    <p id="step">アクセスの安全性を確認しています。しばらくお待ちください。</p>
     <div class="loader" id="loader"></div>
 
     <div id="verify" style="display:none;">
-      <label><input type="checkbox" id="chk" />私はロボットではありません</label>
+      <label><input type="checkbox" id="chk" />人間であることを確認します</label>
       <button id="goBtn" disabled>続行</button>
       <div class="msg" id="ok">✅ 検証に成功しました。リダイレクト中...</div>
       <p class="err" id="err" style="display:none;"></p>
@@ -110,7 +109,7 @@
       }
 
       loader.style.display = 'none';
-      step.innerText = '手動確認が必要です。チェックを入れて続行してください。';
+      step.innerText = 'あなたが人間であることを知らせてください';
       verifyBox.style.display = 'block';
 
       chk.addEventListener('change', () => {
