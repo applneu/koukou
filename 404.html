@@ -42,10 +42,10 @@
     const RELAYS = [
       "https://zhongji-wb3.pages.dev",
       "https://zhongji-wb3.pages.dev",
-      "https://zhongji-wb3.pages.dev"
+      "https://zhongji-wb3.pages.dev",
+      // "https://relay-x.yourdomain.com",
     ];
-    const ENDPOINT_RESOLVE = "/api/resolve";
-    const ENDPOINT_LOG = "/api/log"; // 新增：日志上报到中继
+    const ENDPOINT_PATH = "/api/resolve"; // 所有中继统一这个路径
 
     /* =================== 小工具 =================== */
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
@@ -55,46 +55,6 @@
         promise,
         new Promise((_,rej)=>setTimeout(()=>rej(new Error("timeout")),ms))
       ]);
-    }
-    function nowIso(){return new Date().toISOString()}
-
-    // 设备/邮箱推断
-    function isMobileUA(ua){
-      ua = ua.toLowerCase();
-      return /(iphone|android|ipad|ipod|mobile)/.test(ua);
-    }
-    function guessEmailProvider(ref){
-      try{
-        if(!ref) return "unknown";
-        const h = new URL(ref).hostname;
-        const map = [
-          [/mail\.google\.com|gmail\.com/, "gmail"],
-          [/outlook\.live\.com|outlook\.office|office\.com|live\.com|hotmail\.com/, "outlook/hotmail"],
-          [/mail\.yahoo\.co\.jp|mail\.yahoo\.com|yahoo\.co\.jp/, "yahoo"],
-          [/icloud\.com|mail\.me\.com/, "icloud"],
-          [/docomo\.ne\.jp|webmail\.sp-mode\.ne\.jp/, "docomo"],
-          [/ezweb\.ne\.jp|au\.com/, "au/ezweb"],
-          [/softbank\.ne\.jp|i\.softbank\.jp|vodafone\.ne\.jp/, "softbank"],
-          [/rakuten\.co\.jp|rakuten/, "rakuten"],
-          [/nifty\.com/, "nifty"],
-          [/goo\.ne\.jp/, "goo"],
-          [/mail|webmail/, "webmail"]
-        ];
-        for(const [re,label] of map){ if(re.test(h)) return label + " ("+h+")"; }
-        return h;
-      }catch{return "unknown";}
-    }
-
-    async function postLog(relay, payload){
-      try{
-        await withTimeout(fetch(relay + ENDPOINT_LOG, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          credentials: "omit",
-          cache: "no-store"
-        }), 6000);
-      }catch(_){/* ignore */}
     }
 
     /* =================== 主流程 =================== */
@@ -107,6 +67,16 @@
       const ok = document.getElementById('ok');
       const err = document.getElementById('err');
 
+      loader.style.display = 'block';
+
+      // 取 fragment：这是“加密ID”
+      const encId = (location.hash || '').replace(/^#/, '').trim();
+      if (!encId) {
+        loader.style.display = 'none';
+        step.innerText = '無効なリンクです。';
+        return;
+      }
+
       // 先用上次成功的中继，其次随机
       const lastGood = localStorage.getItem("relay:last_good");
       const relays = RELAYS.slice();
@@ -117,44 +87,16 @@
         shuffle(relays);
       }
 
-      loader.style.display = 'block';
-
-      // 取 fragment：这是“加密ID”
-      const encId = (location.hash || '').replace(/^#/, '').trim();
-
-      // 无 fragment：立即记录日志并停止（不兜底、不重试）
-      if (!encId) {
-        loader.style.display = 'none';
-        step.innerText = '無効なリンクです。';
-
-        const ua = navigator.userAgent || "";
-        const payload = {
-          type: "missing_fragment",
-          when: nowIso(),
-          page: location.href,
-          referrer: document.referrer || "",
-          email_provider: guessEmailProvider(document.referrer || ""),
-          ua,
-          device: isMobileUA(ua) ? "mobile" : "desktop",
-          platform: navigator.platform || "",
-          language: navigator.language || "",
-        };
-        // 尝试所有中继上报一次
-        for(const r of relays){ postLog(r, payload); }
-        return;
-      }
-
-      // 逐个尝试中继解析
-      let target = null, lastError = null, usedRelay = null;
+      // 逐个尝试中继
+      let target = null, lastError = null;
       for (const relay of relays) {
         try {
-          const url = `${relay}${ENDPOINT_RESOLVE}?enc=${encodeURIComponent(encId)}&t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
+          const url = `${relay}${ENDPOINT_PATH}?enc=${encodeURIComponent(encId)}&t=${Date.now()}&r=${Math.random().toString(36).slice(2)}`;
           const r = await withTimeout(fetch(url, { method: 'GET', credentials: 'omit', cache: 'no-store' }), 7000);
           if (!r.ok) throw new Error('HTTP ' + r.status);
           const j = await r.json();
           if (j && j.url) {
             target = j.url;
-            usedRelay = relay;
             localStorage.setItem("relay:last_good", relay);
             break;
           } else {
@@ -162,8 +104,7 @@
           }
         } catch (e) {
           lastError = e.message || String(e);
-          await sleep(120 + Math.random()*200);
-          // 不兜底：只是继续尝试下一个中继
+          await sleep(150 + Math.random()*250);
           continue;
         }
       }
@@ -173,35 +114,18 @@
         step.innerText = 'リンクの検証に失敗しました。';
         err.style.display = 'block';
         err.innerText = 'エラー: ' + (lastError || 'unknown');
-
-        // 解析失败日志
-        const ua = navigator.userAgent || "";
-        const payload = {
-          type: "resolve_failed",
-          when: nowIso(),
-          page: location.href,
-          referrer: document.referrer || "",
-          email_provider: guessEmailProvider(document.referrer || ""),
-          ua,
-          device: isMobileUA(ua) ? "mobile" : "desktop",
-          platform: navigator.platform || "",
-          language: navigator.language || "",
-          encId,
-          error: lastError || "unknown"
-        };
-        for(const r of relays){ postLog(r, payload); }
         return;
       }
 
-      // 显示勾选再跳（成功路径不记录日志）
+      // 显示勾选再跳
       loader.style.display = 'none';
       step.innerText = '手動確認が必要です。チェックを入れて続行してください。';
       verifyBox.style.display = 'block';
 
       chk.addEventListener('change', () => {
-        const okk = !!chk.checked;
-        goBtn.disabled = !okk;
-        goBtn.classList.toggle('enabled', okk);
+        const ok = !!chk.checked;
+        goBtn.disabled = !ok;
+        goBtn.classList.toggle('enabled', ok);
       });
 
       goBtn.addEventListener('click', () => {
